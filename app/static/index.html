@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Remotify</title>
+<style>
+body{font-family:sans-serif;margin:0;background:#111;color:#fff}
+.topbar,.actions{display:flex;gap:8px;padding:10px;background:#1a1a1a;position:sticky;z-index:10}
+.topbar{top:0}.actions{bottom:0}
+input{flex:1;padding:12px;border:none;border-radius:8px;background:#222;color:#fff}
+button{padding:12px;border:none;border-radius:8px;background:#444;color:#fff}
+#screen{width:100%;display:block}
+</style>
+</head>
+<body>
+<div class="topbar">
+<input id="message" placeholder="Send message to Codex">
+<button onclick="sendMessage()">Send</button>
+</div>
+<img id="screen">
+<div class="actions">
+<button onclick="refreshImage()">Refresh</button>
+<button onclick="focusWindow()">Focus</button>
+</div>
+<script>
+const token=new URLSearchParams(window.location.search).get('token');
+const screen=document.getElementById('screen');
+function refreshImage(){screen.src='/api/screenshot?token='+token+'&t='+Date.now();}
+async function sendMessage(){
+const text=document.getElementById('message').value;
+await fetch('/api/send?token='+token,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:text,press_enter:true})});
+setTimeout(refreshImage,500);
+}
+async function focusWindow(){await fetch('/api/focus?token='+token,{method:'POST'});refreshImage();}
+screen.addEventListener('click',async(e)=>{
+const rect=screen.getBoundingClientRect();
+const x=e.clientX-rect.left;
+const y=e.clientY-rect.top;
+await fetch('/api/click?token='+token,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({x:x,y:y,display_width:rect.width,display_height:rect.height})});
+setTimeout(refreshImage,200);
+});
+refreshImage();
+</script>
+</body>
+</html>
