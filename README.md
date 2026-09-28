@@ -34,7 +34,7 @@ On the first run it creates `.env` and stops. Edit `.env`:
 OPENAI_API_KEY=sk-...
 REMOTIFY_TOKEN=use-a-long-random-token
 OPENAI_MODEL=gpt-5.6
-OPENAI_TRANSCRIPTION_MODEL=gpt-transcribe
+OPENAI_TRANSCRIPTION_MODEL=gpt-4o-mini-transcribe
 HOST=127.0.0.1
 PORT=8765
 ```
@@ -70,7 +70,7 @@ tailscale serve status
 To remove it later:
 
 ```powershell
-tailscale serve reset
+tailscale serve off
 ```
 
 Do not use Tailscale Funnel for this app unless you deliberately want a public internet endpoint.
