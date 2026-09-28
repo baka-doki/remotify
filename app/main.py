@@ -24,7 +24,7 @@ load_dotenv()
 
 TOKEN = os.getenv("REMOTIFY_TOKEN", "change-me")
 MODEL = os.getenv("OPENAI_MODEL", "gpt-5.6")
-TRANSCRIPTION_MODEL = os.getenv("OPENAI_TRANSCRIPTION_MODEL", "gpt-transcribe")
+TRANSCRIPTION_MODEL = os.getenv("OPENAI_TRANSCRIPTION_MODEL", "gpt-4o-mini-transcribe")
 HOST = os.getenv("HOST", "127.0.0.1")
 PORT = int(os.getenv("PORT", "8765"))
 MAX_AUDIO_BYTES = 25 * 1024 * 1024
