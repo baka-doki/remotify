@@ -1,138 +1,117 @@
-# Remotify
+# Remotify ChatGPT
 
-Remotify is a tiny mobile-friendly remote controller for a desktop application window.
+A small mobile-first web remote for talking to the OpenAI Responses API from your phone while the service runs on your Windows PC.
 
-The first target is the Codex desktop app on Windows:
+## MVP features
 
-- capture the Codex window screenshot
-- show it in a mobile Web UI
-- send text to the Codex input box by clipboard paste + Enter
-- click on the screenshot and map the click back to the real desktop window
-- focus the target window
-- protect the local control API with a simple token
+- mobile chat UI
+- durable multi-turn conversations using the OpenAI Conversations API
+- local SQLite copy of conversation titles and messages for fast history loading
+- streaming ChatGPT replies
+- phone microphone recording and OpenAI speech-to-text transcription
+- simple token protection
+- designed to sit behind Tailscale Serve so the phone gets HTTPS without exposing the app publicly
 
-This is intentionally a small MVP, because UI automation is already enough chaos without inviting a full circus.
+## Why this version does not automate the ChatGPT desktop app
 
-## Status
+UI automation is fragile. This branch talks to the OpenAI API directly, so sending messages, streaming replies, and loading the conversations created by Remotify are much more reliable.
 
-MVP scaffold.
+This does **not** import or read your existing ChatGPT consumer-app history or ChatGPT Memory. Remotify starts its own API conversations.
 
-## Requirements
+## 1. Download and start on Windows
 
-- Windows 10/11
-- Python 3.10+
-- A visible Codex desktop window
-- Same LAN, Tailscale, ZeroTier, or another private tunnel for phone access
+Requirements: Python 3.10+.
 
-Do **not** expose this service directly to the public internet. It can control your mouse, keyboard, and clipboard. Treat it like a tiny remote-control goblin with house keys.
+Double-click:
 
-## Install
-
-```bash
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
+```text
+start.bat
 ```
 
-## Configure
-
-Copy the example env file:
-
-```bash
-copy .env.example .env
-```
-
-Edit `.env`:
+On the first run it creates `.env` and stops. Edit `.env`:
 
 ```env
-REMOTIFY_TOKEN=change-me
-TARGET_WINDOW_TITLE=Codex
+OPENAI_API_KEY=sk-...
+REMOTIFY_TOKEN=use-a-long-random-token
+OPENAI_MODEL=gpt-5.6
+OPENAI_TRANSCRIPTION_MODEL=gpt-transcribe
 HOST=127.0.0.1
 PORT=8765
 ```
 
-For phone access, prefer Tailscale and bind to `0.0.0.0` only on a private network:
+Run `start.bat` again.
 
-```env
-HOST=0.0.0.0
-```
-
-## Run
-
-```bash
-python -m app.main
-```
-
-Open on the desktop first:
+Desktop test:
 
 ```text
-http://127.0.0.1:8765/?token=change-me
+http://127.0.0.1:8765
 ```
 
-Then open from your phone using the computer's LAN/Tailscale IP:
+Enter your `REMOTIFY_TOKEN` in the web page when asked.
+
+## 2. Recommended phone access: Tailscale Serve
+
+Install Tailscale on the Windows PC and phone, sign into the same tailnet, then leave Remotify bound to `127.0.0.1` and run on the PC:
+
+```powershell
+tailscale serve --bg 8765
+```
+
+Tailscale prints/provisions a private `https://...ts.net` address. Open that HTTPS address on the phone.
+
+HTTPS matters because iOS/Android browsers normally require a secure context before JavaScript can access the microphone.
+
+To inspect the current Serve configuration:
+
+```powershell
+tailscale serve status
+```
+
+To remove it later:
+
+```powershell
+tailscale serve reset
+```
+
+Do not use Tailscale Funnel for this app unless you deliberately want a public internet endpoint.
+
+## API flow
 
 ```text
-http://YOUR_PC_IP:8765/?token=change-me
+Phone browser
+  -> Remotify on PC
+      -> OpenAI Conversations API
+      -> OpenAI Responses API (streaming text)
+      -> OpenAI Transcriptions API (recorded microphone audio)
+  <- local SQLite history + streamed reply
 ```
 
-## Usage
+## Voice input
 
-1. Keep the Codex desktop window visible.
-2. Open Remotify from your phone.
-3. Tap **Refresh** to capture the window.
-4. Type a message and press **Send**.
-5. Tap directly on the screenshot to click the real Codex window.
+Tap the microphone button once to start recording and again to stop. The browser uploads the completed recording to the PC, which sends it to `gpt-transcribe`. The transcript is placed into the text box so you can edit it before sending.
 
-## API
+## Data
 
-### `GET /api/health`
+Local history is stored in:
 
-Returns service status.
-
-### `GET /api/screenshot?token=...`
-
-Returns the current target window screenshot as PNG.
-
-### `POST /api/send?token=...`
-
-```json
-{
-  "text": "Continue the previous task.",
-  "press_enter": true
-}
+```text
+data/remotify.db
 ```
 
-### `POST /api/click?token=...`
+The corresponding OpenAI conversation ID is also saved locally.
 
-Coordinates are relative to the image shown in the browser.
+## Security notes
 
-```json
-{
-  "x": 120,
-  "y": 500,
-  "display_width": 390,
-  "display_height": 800
-}
-```
+- keep `.env` out of GitHub
+- use a long random `REMOTIFY_TOKEN`
+- keep `HOST=127.0.0.1` when using Tailscale Serve
+- do not directly expose port `8765` to the public internet
+- the OpenAI API key stays on the PC; it is never sent to the phone browser
 
-### `POST /api/focus?token=...`
+## Current limitations
 
-Focuses the target window.
-
-## Limitations
-
-- Windows-focused MVP.
-- Requires the target window to be visible and not minimized.
-- Does not OCR or understand the Codex UI yet.
-- Clipboard is temporarily overwritten when sending text.
-- Some apps/windows may require running the terminal as administrator if they are elevated.
-
-## Roadmap
-
-- WebSocket auto-refresh
-- OCR output extraction
-- multiple target windows
-- configurable hotkeys
-- approve button helper
-- session presets
-- Tailscale setup guide
+- this is API chat, not the ChatGPT consumer app
+- it cannot read existing ChatGPT.com history or ChatGPT Memory
+- no image/file upload yet
+- no model picker in the UI yet; change `OPENAI_MODEL` in `.env`
+- no message editing/branching yet
